@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>玉树养护助手</title>
+<style>
+:root{
+  --g1:#1b5e20;--g2:#2e7d32;--g3:#388e3c;--g4:#43a047;--g5:#4caf50;
+  --g6:#66bb6a;--g7:#81c784;--g8:#a5d6a7;--g9:#c8e6c9;--g10:#e8f5e9;
+  --bg:#f1f8e9;--card:#fff;--text:#1b5e20;--text2:#555;--shadow:0 2px 12px rgba(27,94,32,.12);
+  --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Microsoft YaHei','PingFang SC',sans-serif;background:var(--bg);color:var(--text2);min-height:100vh}
+header{background:linear-gradient(135deg,var(--g1),var(--g3));color:#fff;padding:16px 20px;text-align:center;position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+header h1{font-size:1.3em;font-weight:600;letter-spacing:2px}
+header .season-badge{display:inline-block;margin-top:6px;padding:3px 14px;background:rgba(255,255,255,.2);border-radius:20px;font-size:.8em;margin-left:6px}
+header .location-badge{display:inline-block;margin-top:6px;padding:3px 14px;background:rgba(255,255,255,.15);border-radius:20px;font-size:.8em;margin-right:6px;cursor:pointer;transition:background .2s}
+header .location-badge:hover{background:rgba(255,255,255,.25)}
+header .badges{margin-top:6px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:0}
+.container{max-width:1200px;margin:0 auto;padding:12px 16px 80px;width:100%}
+.section-title{font-size:.95em;font-weight:700;color:var(--g2);margin:16px 0 10px;padding-left:8px;border-left:3px solid var(--g5)}
+
+/* 添加植物 */
+.add-bar{display:flex;gap:8px;margin-bottom:14px;max-width:400px}
+.add-bar input{flex:1;padding:10px 14px;border:1.5px solid var(--g8);border-radius:var(--radius);font-size:.9em;outline:none;background:#fff;transition:border .2s}
+.add-bar input:focus{border-color:var(--g5)}
+.add-bar button{padding:10px 18px;background:var(--g5);color:#fff;border:none;border-radius:var(--radius);font-size:.9em;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .2s}
+.add-bar button:hover{background:var(--g3)}
+.btn-save{background:var(--g3)!important}.btn-save:hover{background:var(--g2)!important}
+.btn-load{background:#8d6e63!important}.btn-load:hover{background:#6d4c41!important}
+
+/* 植物列表 - 4列网格 */
+#plantList{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+
+/* 植物卡片 */
+.plant-card{background:var(--card);border-radius:var(--radius);padding:14px 12px;box-shadow:var(--shadow);border:1px solid var(--g9);transition:transform .15s;display:flex;flex-direction:column}
+.plant-card:active{transform:scale(.99)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.card-left{display:flex;align-items:center;gap:8px;min-width:0}
+.plant-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--g5),var(--g3));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.85em;flex-shrink:0;overflow:hidden}
+.plant-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.plant-photo{width:100%;aspect-ratio:4/3;border-radius:8px;overflow:hidden;margin-bottom:10px;background:var(--g10);position:relative;cursor:pointer}
+.plant-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.plant-photo .photo-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#bbb;font-size:.8em;padding:8px 0}
+.plant-photo .photo-placeholder span{font-size:1.6em;margin-bottom:2px}
+.photo-input{display:none}
+.plant-name{font-weight:700;font-size:.92em;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.plant-id{font-size:.7em;color:var(--g5);margin-top:1px}
+.btn-del{background:none;border:none;color:#bbb;font-size:1em;cursor:pointer;padding:2px 4px;transition:color .2s;flex-shrink:0}
+.btn-del:hover{color:#e53935}
+.reminders{display:flex;flex-direction:column;gap:6px;flex:1}
+.remind-item{display:flex;align-items:center;gap:6px;background:var(--g10);border-radius:8px;padding:7px 8px;position:relative}
+.remind-item.urgent{background:#fff3e0}
+.remind-item.overdue{background:#fbe9e7}
+.remind-icon{font-size:1.1em;flex-shrink:0}
+.remind-info{flex:1;min-width:0}
+.remind-label{font-size:.68em;color:var(--g3);font-weight:600}
+.remind-days{font-size:.95em;font-weight:700;color:var(--text)}
+.remind-days.over{color:#e53935}
+.remind-days.soon{color:#f57c00}
+.remind-unit{font-size:.65em;color:#999;margin-left:2px}
+.remind-action{border:none;border-radius:5px;font-size:.65em;font-weight:600;cursor:pointer;transition:all .2s;padding:3px 8px;white-space:nowrap;flex-shrink:0}
+.btn-water{background:var(--g5);color:#fff}.btn-water:hover{background:var(--g3)}
+.btn-fert{background:#66bb6a;color:#fff}.btn-fert:hover{background:#43a047}
+.btn-soil{background:#8d6e63;color:#fff}.btn-soil:hover{background:#6d4c41}
+
+/* 暂停状态 */
+.remind-item.paused{opacity:.5}
+.remind-item.paused .remind-days{color:#aaa;font-size:.8em}
+
+/* 记录列表 */
+.record-section{margin-top:8px}
+.record-toggle{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.72em;color:var(--g5);font-weight:600;padding:4px 0;user-select:none}
+.record-toggle .arrow{transition:transform .2s;font-size:.65em}
+.record-toggle .arrow.open{transform:rotate(90deg)}
+.record-list{max-height:0;overflow:hidden;transition:max-height .3s}
+.record-list.open{max-height:500px;overflow-y:auto}
+.record-item{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:.72em;color:#777;border-bottom:1px solid #f0f0f0}
+.record-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot-water{background:var(--g5)}.dot-fert{background:#66bb6a}.dot-soil{background:#8d6e63}
+.record-text{flex:1}
+.record-date{color:#aaa;font-size:.7em;white-space:nowrap}
+
+/* 养护知识 */
+.knowledge-card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:10px;box-shadow:var(--shadow);border:1px solid var(--g9)}
+.knowledge-card h3{font-size:.9em;color:var(--g2);margin-bottom:8px}
+.season-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.season-box{background:var(--g10);border-radius:8px;padding:10px}
+.season-box h4{font-size:.8em;color:var(--g3);margin-bottom:4px}
+.season-box p{font-size:.72em;color:#666;line-height:1.6}
+
+/* 底部导航 */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;border-top:1px solid #e0e0e0;z-index:50;box-shadow:0 -2px 8px rgba(0,0,0,.06)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 0 6px;cursor:pointer;color:#999;font-size:.7em;transition:color .2s}
+.nav-item.active{color:var(--g5)}
+.nav-item svg{width:22px;height:22px;margin-bottom:2px;fill:currentColor}
+.page{display:none}.page.active{display:block}
+
+/* 空状态 */
+.empty{text-align:center;padding:40px 20px;color:#bbb}
+.empty-icon{font-size:3em;margin-bottom:10px}
+.empty p{font-size:.9em}
+
+/* 弹窗 */
+.modal-mask{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-mask.show{opacity:1;pointer-events:all}
+.modal-box{background:#fff;border-radius:16px;padding:24px;width:90%;max-width:360px;text-align:center}
+.modal-box h3{color:var(--g2);margin-bottom:10px;font-size:1.05em}
+.modal-box p{font-size:.85em;color:#666;margin-bottom:18px;line-height:1.5}
+.modal-btns{display:flex;gap:10px;justify-content:center}
+.modal-btns button{padding:8px 24px;border:none;border-radius:20px;font-size:.85em;font-weight:600;cursor:pointer}
+.mbtn-cancel{background:#eee;color:#666}.mbtn-ok{background:var(--g5);color:#fff}
+
+/* toast */
+.toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:var(--g3);color:#fff;padding:8px 22px;border-radius:20px;font-size:.85em;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+
+@media(max-width:1100px){
+  #plantList{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:780px){
+  #plantList{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:500px){
+  #plantList{grid-template-columns:1fr}
+  .add-bar{max-width:100%}
+}
+@media(min-width:800px){
+  .container{padding:16px 20px 80px}
+  .season-grid{grid-template-columns:repeat(4,1fr)}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>玉树养护助手</h1>
+  <div class="badges">
+    <span class="location-badge" id="locationBadge" onclick="refreshLocation()">📍 定位中...</span>
+    <span class="season-badge" id="seasonBadge">当前季节：--</span>
+  </div>
+</header>
+
+<!-- 首页 -->
+<div class="container" id="homePage">
+  <div class="section-title">我的玉树</div>
+  <div class="add-bar">
+    <input id="plantInput" type="text" placeholder="给新玉树起个名字（如：阳台1号）" maxlength="20">
+    <button onclick="addPlant()">添加</button>
+    <button class="btn-save" onclick="exportData()" title="保存到文件">保存</button>
+    <button class="btn-load" onclick="document.getElementById('importFile').click()" title="从文件加载">加载</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+  <div id="plantList"></div>
+  <div id="emptyTip" class="empty">
+    <div class="empty-icon">🌱</div>
+    <p>还没有玉树，点击上方添加第一棵吧</p>
+  </div>
+</div>
+
+<!-- 知识页 -->
+<div class="container page" id="knowledgePage" style="padding-top:12px">
+  <div class="section-title">四季养护指南</div>
+  <div class="knowledge-card">
+    <h3>浇水·施肥·换土周期说明</h3>
+    <div class="season-grid">
+      <div class="season-box">
+        <h4>🌸 春季（3-5月）</h4>
+        <p>浇水：7天/次<br>施肥：17天/次<br>换土：每2年1次</p>
+      </div>
+      <div class="season-box">
+        <h4>☀️ 夏季（6-8月）</h4>
+        <p>浇水：14天/次（梅雨控水）<br>施肥：暂停（休眠期）<br>换土：不宜换土</p>
+      </div>
+      <div class="season-box">
+        <h4>🍂 秋季（9-11月）</h4>
+        <p>浇水：7天/次<br>施肥：20天/次<br>换土：初秋可行</p>
+      </div>
+      <div class="season-box">
+        <h4>❄️ 冬季（12-2月）</h4>
+        <p>浇水：25天/次（阴冷控水）<br>施肥：停止施肥<br>换土：不宜换土</p>
+      </div>
+    </div>
+  </div>
+  <div class="knowledge-card">
+    <h3>养护要点</h3>
+    <div class="season-grid">
+      <div class="season-box">
+        <h4>💧 浇水</h4>
+        <p>见干见湿，避免积水。夏季可叶面喷水，冬季控水防冻根。</p>
+      </div>
+      <div class="season-box">
+        <h4>🧪 施肥</h4>
+        <p>生长期用稀释饼肥水或复合肥。薄肥勤施，忌浓肥烧根。</p>
+      </div>
+      <div class="season-box">
+        <h4>🪴 换土</h4>
+        <p>春季最佳。用疏松沙质土，盆底垫碎石排水。去掉老根枯根。</p>
+      </div>
+      <div class="season-box">
+        <h4>☀️ 光照</h4>
+        <p>喜光耐半阴，夏季忌暴晒。充足光照叶片肥厚翠绿。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 底部导航 -->
+<div class="bottom-nav">
+  <div class="nav-item active" onclick="switchPage('home')">
+    <svg viewBox="0 0 24 24"><path d="M12 3L4 9v12h5v-7h6v7h5V9z"/></svg>
+    <span>我的玉树</span>
+  </div>
+  <div class="nav-item" onclick="switchPage('knowledge')">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>
+    <span>养护知识</span>
+  </div>
+</div>
+
+<!-- 删除确认弹窗 -->
+<div class="modal-mask" id="delModal">
+  <div class="modal-box">
+    <h3>确认删除</h3>
+    <p id="delMsg">确定要删除这棵玉树吗？所有记录将一并清除。</p>
+    <div class="modal-btns">
+      <button class="mbtn-cancel" onclick="closeDelModal()">取消</button>
+      <button class="mbtn-ok" onclick="confirmDel()">删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- 导入确认弹窗 -->
+<div class="modal-mask" id="importModal">
+  <div class="modal-box">
+    <h3>加载数据</h3>
+    <p id="importMsg">检测到文件中有 N 棵玉树，如何处理？</p>
+    <div class="modal-btns">
+      <button class="mbtn-cancel" onclick="cancelImport()">取消</button>
+      <button class="mbtn-ok" style="background:#8d6e63" onclick="doImportMerge()">合并</button>
+      <button class="mbtn-ok" style="background:var(--g5)" onclick="doImportReplace()">替换</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ========== 定位 ========== */
+let currentCity = localStorage.getItem('ys_city') || '';
+
+function refreshLocation() {
+  let badge = document.getElementById('locationBadge');
+  badge.textContent = '📍 定位中...';
+  if (!navigator.geolocation) {
+    badge.textContent = '📍 定位不可用';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(pos => {
+    let lat = pos.coords.latitude;
+    let lon = pos.coords.longitude;
+    // 使用 Nominatim 逆地理编码（免费无需key）
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=zh`)
+      .then(r => r.json())
+      .then(data => {
+        let addr = data.address || {};
+        let city = addr.city || addr.town || addr.county || addr.state || '';
+        // 部分城市返回 "南京市" 等，去掉"市"
+        city = city.replace(/市$/, '');
+        if (city) {
+          currentCity = city;
+          localStorage.setItem('ys_city', city);
+          badge.textContent = '📍 ' + city;
+        } else {
+          badge.textContent = '📍 ' + addr.state || '未知';
+        }
+      })
+      .catch(() => {
+        badge.textContent = '📍 ' + (currentCity || '定位失败');
+      });
+  }, err => {
+    // 定位被拒绝或失败，使用缓存
+    badge.textContent = '📍 ' + (currentCity || '请允许定位');
+  }, { timeout: 8000 });
+}
+
+/* ========== 季节与养护周期 ========== */
+const SEASON_RULES = {
+  spring: { name:'春季', water:7,  fert:17, soil:730, soilAllow:true  },
+  summer: { name:'夏季', water:14, fert:0,  soil:0,   soilAllow:false },
+  autumn: { name:'秋季', water:7,  fert:20, soil:365, soilAllow:true  },
+  winter: { name:'冬季', water:25, fert:0,  soil:0,   soilAllow:false }
+};
+
+function getSeason() {
+  let m = new Date().getMonth() + 1;
+  if (m >= 3 && m <= 5) return 'spring';
+  if (m >= 6 && m <= 8) return 'summer';
+  if (m >= 9 && m <= 11) return 'autumn';
+  return 'winter';
+}
+
+function getSeasonEmoji(s) {
+  return {spring:'🌸',summer:'☀️',autumn:'🍂',winter:'❄️'}[s];
+}
+
+/* ========== 数据管理 ========== */
+let plants = [];
+let delTarget = null;
+
+function loadData() {
+  try { plants = JSON.parse(localStorage.getItem('ys_plants') || '[]'); } catch(e) { plants = []; }
+}
+function saveData() {
+  localStorage.setItem('ys_plants', JSON.stringify(plants));
+}
+
+/* ========== 导出/导入 ========== */
+function exportData() {
+  if (plants.length === 0) { showToast('暂无数据可保存'); return; }
+  let obj = {
+    version: 1,
+    exportDate: new Date().toISOString(),
+    city: currentCity,
+    plants: plants
+  };
+  let json = JSON.stringify(obj, null, 2);
+  let blob = new Blob([json], {type:'application/json'});
+  let url = URL.createObjectURL(blob);
+  let a = document.createElement('a');
+  let d = new Date();
+  let fname = `玉树养护_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
+  a.href = url; a.download = fname; a.click();
+  URL.revokeObjectURL(url);
+  showToast('数据已保存到文件');
+}
+
+let pendingImportData = null;
+
+function importData(evt) {
+  let file = evt.target.files[0];
+  if (!file) return;
+  let reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      let obj = JSON.parse(e.target.result);
+      if (!obj.plants || !Array.isArray(obj.plants)) {
+        showToast('文件格式不正确'); return;
+      }
+      pendingImportData = obj;
+      let count = obj.plants.length;
+      document.getElementById('importMsg').textContent =
+        `检测到文件中有 ${count} 棵玉树${obj.city?'（'+obj.city+'）':''}，如何处理？\n合并：保留现有数据，追加新数据\n替换：清除现有数据，使用文件数据`;
+      document.getElementById('importModal').classList.add('show');
+    } catch(err) {
+      showToast('文件读取失败');
+    }
+  };
+  reader.readAsText(file);
+  evt.target.value = '';
+}
+
+function cancelImport() {
+  document.getElementById('importModal').classList.remove('show');
+  pendingImportData = null;
+}
+
+function doImportMerge() {
+  if (!pendingImportData) return;
+  let obj = pendingImportData;
+  if (obj.city) {
+    currentCity = obj.city;
+    localStorage.setItem('ys_city', currentCity);
+    document.getElementById('locationBadge').textContent = '📍 ' + currentCity;
+  }
+  let existIds = new Set(plants.map(p => p.id));
+  let newCount = 0;
+  obj.plants.forEach(p => {
+    if (!existIds.has(p.id)) { plants.push(p); newCount++; }
+  });
+  plants.forEach((p,i) => p.no = i+1);
+  saveData(); render();
+  document.getElementById('importModal').classList.remove('show');
+  pendingImportData = null;
+  showToast(`合并完成，新增${newCount}棵`);
+}
+
+function doImportReplace() {
+  if (!pendingImportData) return;
+  let obj = pendingImportData;
+  if (obj.city) {
+    currentCity = obj.city;
+    localStorage.setItem('ys_city', currentCity);
+    document.getElementById('locationBadge').textContent = '📍 ' + currentCity;
+  }
+  plants = obj.plants;
+  plants.forEach((p,i) => p.no = i+1);
+  saveData(); render();
+  document.getElementById('importModal').classList.remove('show');
+  pendingImportData = null;
+  showToast(`已替换，共${plants.length}棵`);
+}
+
+function addPlant() {
+  let input = document.getElementById('plantInput');
+  let name = input.value.trim();
+  if (!name) { showToast('请输入玉树名称'); return; }
+  let now = Date.now();
+  plants.push({
+    id: now,
+    name: name,
+    no: plants.length + 1,
+    createdAt: now,
+    lastWater: now,
+    lastFert: 0,
+    lastSoil: now,
+    records: []
+  });
+  // 初始记录
+  let p = plants[plants.length-1];
+  p.records.push({type:'water', date:now, note:'初次浇水'});
+  saveData();
+  input.value = '';
+  render();
+  showToast('添加成功');
+}
+
+function requestDel(id) {
+  delTarget = id;
+  let p = plants.find(x => x.id === id);
+  document.getElementById('delMsg').textContent = `确定要删除"${p.name}"吗？所有记录将一并清除。`;
+  document.getElementById('delModal').classList.add('show');
+}
+function closeDelModal() {
+  document.getElementById('delModal').classList.remove('show');
+  delTarget = null;
+}
+function confirmDel() {
+  if (delTarget !== null) {
+    plants = plants.filter(x => x.id !== delTarget);
+    // 重新编号
+    plants.forEach((p,i) => p.no = i+1);
+    saveData();
+    render();
+  }
+  closeDelModal();
+}
+
+function doAction(id, type) {
+  let p = plants.find(x => x.id === id);
+  if (!p) return;
+  let season = getSeason();
+  if (type === 'fert' && SEASON_RULES[season].fert === 0) {
+    showToast(SEASON_RULES[season].name + '不宜施肥');
+    return;
+  }
+  if (type === 'soil' && !SEASON_RULES[season].soilAllow) {
+    showToast(SEASON_RULES[season].name + '不宜换土');
+    return;
+  }
+  let now = Date.now();
+  let labels = {water:'浇水',fert:'施肥',soil:'换土'};
+  if (type === 'water') p.lastWater = now;
+  if (type === 'fert') p.lastFert = now;
+  if (type === 'soil') p.lastSoil = now;
+  p.records.unshift({type, date:now, note:labels[type]});
+  if (p.records.length > 50) p.records = p.records.slice(0, 50);
+  saveData();
+  render();
+  showToast(labels[type] + '记录已更新');
+}
+
+/* ========== 照片管理 ========== */
+function triggerPhoto(id) {
+  document.getElementById('photoInput_' + id).click();
+}
+
+function uploadPhoto(id, input) {
+  let file = input.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    showToast('请选择图片文件');
+    return;
+  }
+  let p = plants.find(x => x.id === id);
+  if (!p) return;
+  let reader = new FileReader();
+  reader.onload = function(e) {
+    // 压缩图片，避免localStorage溢出
+    compressImage(e.target.result, 600, 0.7, function(compressed) {
+      p.photo = compressed;
+      saveData();
+      render();
+      showToast('照片已保存');
+    });
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function compressImage(dataUrl, maxW, quality, callback) {
+  let img = new Image();
+  img.onload = function() {
+    let w = img.width, h = img.height;
+    if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+    let canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    let ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    callback(canvas.toDataURL('image/jpeg', quality));
+  };
+  img.src = dataUrl;
+}
+
+/* ========== 计算 ========== */
+function daysSince(ts) {
+  if (!ts) return 9999;
+  return Math.floor((Date.now() - ts) / 86400000);
+}
+
+function getNextDays(plant) {
+  let s = getSeason();
+  let rule = SEASON_RULES[s];
+  return {
+    water: rule.water - daysSince(plant.lastWater),
+    fert: rule.fert > 0 ? rule.fert - daysSince(plant.lastFert) : -1,
+    soil: rule.soilAllow ? rule.soil - daysSince(plant.lastSoil) : -1,
+    seasonRule: rule
+  };
+}
+
+/* ========== 渲染 ========== */
+function render() {
+  let season = getSeason();
+  let rule = SEASON_RULES[season];
+  document.getElementById('seasonBadge').textContent =
+    `${getSeasonEmoji(season)} ${rule.name} · 浇水${rule.water}天/次 · 施肥${rule.fert>0?rule.fert+'天/次':'暂停'} · 换土${rule.soilAllow?'可':'暂不'}`;
+
+  let list = document.getElementById('plantList');
+  let empty = document.getElementById('emptyTip');
+
+  if (plants.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  let html = '';
+  plants.forEach(p => {
+    let next = getNextDays(p);
+    let photoHtml = p.photo
+      ? `<img src="${p.photo}" alt="${esc(p.name)}" onclick="triggerPhoto(${p.id})">`
+      : `<div class="photo-placeholder" onclick="triggerPhoto(${p.id})"><span>📷</span>点击添加照片</div>`;
+    html += `<div class="plant-card">
+      <div class="plant-photo" title="点击上传照片">${photoHtml}</div>
+      <input type="file" class="photo-input" id="photoInput_${p.id}" accept="image/*" onchange="uploadPhoto(${p.id},this)">
+      <div class="card-header">
+        <div class="card-left">
+          <div class="plant-avatar">${p.photo ? '<img src="'+p.photo+'">' : p.no}</div>
+          <div>
+            <div class="plant-name">${esc(p.name)}</div>
+            <div class="plant-id">NO.${String(p.no).padStart(3,'0')}</div>
+          </div>
+        </div>
+        <button class="btn-del" onclick="requestDel(${p.id})" title="删除">✕</button>
+      </div>
+      <div class="reminders">`;
+
+    // 浇水
+    let wd = next.water;
+    let wCls = wd <= 0 ? 'overdue' : wd <= 2 ? 'urgent' : '';
+    let wDayCls = wd <= 0 ? 'over' : wd <= 2 ? 'soon' : '';
+    html += `<div class="remind-item ${wCls}">
+      <div class="remind-icon">💧</div>
+      <div class="remind-info">
+        <div class="remind-label">浇水</div>
+        <div><span class="remind-days ${wDayCls}">${wd <= 0 ? '已超'+Math.abs(wd) : wd}</span><span class="remind-unit">${wd <= 0 ? '天前到期' : '天后'}</span></div>
+      </div>
+      <button class="remind-action btn-water" onclick="doAction(${p.id},'water')">已浇</button>
+    </div>`;
+
+    // 施肥
+    if (next.fert >= 0) {
+      let fd = next.fert;
+      let fCls = fd <= 0 ? 'overdue' : fd <= 3 ? 'urgent' : '';
+      let fDayCls = fd <= 0 ? 'over' : fd <= 3 ? 'soon' : '';
+      html += `<div class="remind-item ${fCls}">
+        <div class="remind-icon">🧪</div>
+        <div class="remind-info">
+          <div class="remind-label">施肥</div>
+          <div><span class="remind-days ${fDayCls}">${fd <= 0 ? '已超'+Math.abs(fd) : fd}</span><span class="remind-unit">${fd <= 0 ? '天前到期' : '天后'}</span></div>
+        </div>
+        <button class="remind-action btn-fert" onclick="doAction(${p.id},'fert')">已施</button>
+      </div>`;
+    } else {
+      html += `<div class="remind-item paused">
+        <div class="remind-icon">🧪</div>
+        <div class="remind-info">
+          <div class="remind-label">施肥</div>
+          <div class="remind-days">${next.seasonRule.name}暂停</div>
+        </div>
+      </div>`;
+    }
+
+    // 换土
+    if (next.soil >= 0) {
+      let sd = next.soil;
+      let sDays = sd;
+      let sLabel;
+      if (sd > 365) { sDays = Math.round(sd/365*10)/10; sLabel = '年后'; }
+      else { sLabel = '天后'; }
+      html += `<div class="remind-item">
+        <div class="remind-icon">🪴</div>
+        <div class="remind-info">
+          <div class="remind-label">换土</div>
+          <div><span class="remind-days">${sDays}</span><span class="remind-unit">${sLabel}</span></div>
+        </div>
+        <button class="remind-action btn-soil" onclick="doAction(${p.id},'soil')">已换</button>
+      </div>`;
+    } else {
+      html += `<div class="remind-item paused">
+        <div class="remind-icon">🪴</div>
+        <div class="remind-info">
+          <div class="remind-label">换土</div>
+          <div class="remind-days">${next.seasonRule.name}暂停</div>
+        </div>
+      </div>`;
+    }
+
+    html += `</div>`; // reminders
+
+    // 记录区
+    html += `<div class="record-section">
+      <div class="record-toggle" onclick="toggleRecords(this)">
+        <span class="arrow">▶</span> 养护记录（${p.records.length}条）
+      </div>
+      <div class="record-list">`;
+
+    p.records.forEach(r => {
+      let dotCls = {water:'dot-water',fert:'dot-fert',soil:'dot-soil'}[r.type]||'';
+      let d = new Date(r.date);
+      let ds = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      html += `<div class="record-item">
+        <span class="record-dot ${dotCls}"></span>
+        <span class="record-text">${r.note}</span>
+        <span class="record-date">${ds}</span>
+      </div>`;
+    });
+
+    html += `</div></div></div>`; // record-section, plant-card
+  });
+
+  list.innerHTML = html;
+}
+
+function toggleRecords(el) {
+  let list = el.nextElementSibling;
+  let arrow = el.querySelector('.arrow');
+  list.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+function esc(s) {
+  let d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+}
+
+/* ========== 页面切换 ========== */
+function switchPage(page) {
+  document.querySelectorAll('.nav-item').forEach((el,i) => {
+    el.classList.toggle('active', (page==='home'&&i===0)||(page==='knowledge'&&i===1));
+  });
+  document.getElementById('homePage').classList.toggle('active', page==='home');
+  document.getElementById('knowledgePage').classList.toggle('active', page==='knowledge');
+  // home page is not a .page, so handle visibility
+  document.getElementById('homePage').style.display = page==='home' ? 'block' : 'none';
+}
+
+/* ========== Toast ========== */
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+/* ========== 初始化 ========== */
+loadData();
+render();
+refreshLocation();
+
+// 顶部季节badge实时
+document.getElementById('homePage').classList.add('active');
+</script>
+</body>
+</html>
